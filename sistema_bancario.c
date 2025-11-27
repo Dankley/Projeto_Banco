@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #define MAX_CONTAS 100
 #define TAM_NOME 100
 #define TAM_CPF 15
-#define TAM_AGENCIA 20
+#define TAM_AGENCIA 10
 #define TAM_TELEFONE 20
 #define ATIVA 1
 #define ENCERRADA 0
@@ -17,6 +18,37 @@ typedef struct {
     double saldo;
     int status;                 /* ATIVA ou ENCERRADA */
 } Conta;
+
+// Funções de validação
+int validar_nome(const char* nome) {
+	int has_alpha = 0;
+	if (nome == NULL || nome[0] == '\0') return 0;
+	for (size_t i = 0; nome[i] != '\0'; i++) {
+		if (isdigit((unsigned char)nome[i])) return 0; // não permite dígitos no nome
+		if (isalpha((unsigned char)nome[i])) has_alpha = 1;
+	}
+	return has_alpha; // válido se tiver pelo menos uma letra e nenhum dígito
+}
+
+int validar_cpf(const char* cpf) {
+	if (cpf == NULL) return 0;
+	int len = 0;
+	for (size_t i = 0; cpf[i] != '\0'; i++) {
+		if (!isdigit((unsigned char)cpf[i])) return 0; // não permite letras ou outros símbolos
+		len++;
+	}
+	return (len == 11); // CPF brasileiro tem 11 dígitos
+}
+
+int validar_telefone(const char* telefone) {
+	if (telefone == NULL) return 0;
+	int len = 0;
+	for (size_t i = 0; telefone[i] != '\0'; i++) {
+		if (!isdigit((unsigned char)telefone[i])) return 0; // não permite letras
+		len++;
+	}
+	return (len >= 8 && len <= 15); // aceita telefones com 8 a 15 dígitos
+}
 
 int BuscarPorCPF (Conta contas[], int qtd, char cpf[])
 	{
@@ -56,10 +88,22 @@ void abrirConta(Conta contas[], int *qtd)
 		printf("Digite o nome completo: ");
 		fgets(contas[*qtd].nome,TAM_NOME,stdin);
 		contas[*qtd].nome[strcspn(contas[*qtd].nome, "\n")] = '\0';
+
+		// Valida nome: não pode conter números
+		if (!validar_nome(contas[*qtd].nome)) {
+			printf("nome invalido\n");
+			return;
+		}
 		
 		printf("Digite o seu CPF: ");
 		fgets (contas[*qtd].cpf,TAM_CPF,stdin);
 		contas[*qtd].cpf[strcspn(contas[*qtd].cpf, "\n")] = '\0';
+
+		// Valida CPF: somente dígitos, 11 caracteres
+		if (!validar_cpf(contas[*qtd].cpf)) {
+			printf("cpf invalido\n");
+			return;
+		}
 		
 		int idx = BuscarPorCPF (contas, *qtd, contas[*qtd].cpf); //valida se nao esta usando o cpf duas vezes
 		if (idx != -1 && contas[idx].status == ATIVA)
@@ -68,9 +112,14 @@ void abrirConta(Conta contas[], int *qtd)
 				return;
 			}
 		printf("Digite seu telefone: ");
-        getchar();
 		fgets(contas[*qtd].telefone,TAM_TELEFONE,stdin);
 		contas[*qtd].telefone[strcspn(contas[*qtd].telefone, "\n")] = '\0';
+
+		// Valida telefone: somente dígitos e tamanho razoavel
+		if (!validar_telefone(contas[*qtd].telefone)) {
+			printf("numero invalido\n");
+			return;
+		}
 		
 		contas[*qtd].saldo = 0;
 		
@@ -277,7 +326,13 @@ void consultar(Conta contas[], int qtd)
 	printf ("digite o CPF: ");
 	fgets (cpf, TAM_CPF,stdin);
 	cpf[strcspn(cpf, "\n")] = '\0';
-	
+
+	// valida CPF antes de buscar
+	if (!validar_cpf(cpf)) {
+		printf("cpf invalido\n");
+		return;
+	}
+
 	idx = BuscarPorCPF (contas, qtd, cpf);
 	}
 	 else 
@@ -343,7 +398,11 @@ void alterar(Conta contas[], int qtd)
 					printf ("Novo telefone:");
 					fgets(contas[idx].telefone,TAM_TELEFONE,stdin);
 					contas[idx].telefone[strcspn(contas[idx].telefone, "\n")] = '\0';
-					printf ("Telefone atualizado com sucesso!\n");
+					if (!validar_telefone(contas[idx].telefone)) {
+						printf("numero invalido\n");
+					} else {
+						printf ("Telefone atualizado com sucesso!\n");
+					}
 					break;
 					case 2:
 					printf ("Nova agencia: ");
